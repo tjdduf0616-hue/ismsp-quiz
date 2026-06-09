@@ -1,0 +1,10 @@
+{
+  "name": "ismsp-quiz",
+  "version": "1.0.0",
+  "description": "ISMS-P 심사원 시험 대비 문제풀이 웹앱",
+  "scripts": {
+    "validate": "node scripts/validate.js",
+    "serve": "npx --yes http-server -p 5500 -c-1 ."
+  },
+  "license": "MIT"
+}
