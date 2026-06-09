@@ -20,7 +20,7 @@ const bank = globalThis.QUESTION_BANK;
 const errors = [];
 const ids = new Set();
 const byCat = {};
-const VALID_CATS = ['고난도','암기','AI','가명','직책','제도','관리','보호','개인정보','법령','안전성','클라우드','보안기술','보안기사'];
+const VALID_CATS = ['고난도','암기','AI','가명','직책','제도','관리','보호','개인정보','개인정보기준','법령','안전성','클라우드','보안기술','보안기사'];
 
 bank.forEach((q, i) => {
   const where = `#${i + 1} (id=${q.id || '없음'})`;
