@@ -224,16 +224,25 @@ function boot(){
 }
 
 let curCats=new Set(['전체']), deck=[], idx=0, answered=false, reviewMode=false;
-const CATS=['전체','고난도','암기','AI','가명','직책','제도','관리','보호','개인정보','법령','안전성','클라우드','보안기술','보안기사'];
+// 개별 문항 태그용 세부 라벨(문제 화면·통계 상세에 표시)
 const CAT_LABEL={전체:'전체',고난도:'🔥고난도',암기:'⭐암기항목',AI:'🤖AI·신기술',가명:'🧬가명처리',직책:'👔CISO/CPO',제도:'인증제도',관리:'관리체계',보호:'보호대책',개인정보:'개인정보',법령:'법령',안전성:'안전성조치',클라우드:'클라우드',보안기술:'🛡️보안기술',보안기사:'📡보안기사'};
+// 5개 묶음 그룹(칩·모의고사·통계에 표시) — 세부 cat 값을 그룹으로 묶음
+const GROUPS={'제도·관리':['제도','관리','직책'],'보호·기술':['보호','안전성','클라우드','보안기술'],'개인정보·법령':['개인정보','법령','가명','AI'],'보안기사':['보안기사'],'핵심정리':['암기','고난도']};
+const GLABEL={'전체':'전체','제도·관리':'🏛 제도·관리','보호·기술':'🛡 보호·기술','개인정보·법령':'🔐 개인정보·법령','보안기사':'📡 보안기사','핵심정리':'⭐ 핵심정리'};
+const CATS=['전체',...Object.keys(GROUPS)];
+const CAT2GROUP={}; Object.entries(GROUPS).forEach(([g,cs])=>cs.forEach(c=>CAT2GROUP[c]=g));
+function expandCats(){if(curCats.has('전체'))return null;const out=new Set();curCats.forEach(g=>(GROUPS[g]||[]).forEach(c=>out.add(c)));return out;}
 
 /* ====== 초기화 ====== */
 function init(){
-  if(state.session&&Array.isArray(state.session.cats)&&state.session.cats.length)curCats=new Set(state.session.cats);
+  if(state.session&&Array.isArray(state.session.cats)&&state.session.cats.length){
+    curCats=new Set(state.session.cats.filter(k=>k==='전체'||GROUPS[k]));
+    if(curCats.size===0)curCats=new Set(['전체']);
+  }
   const c=document.getElementById('cats');
-  c.innerHTML=CATS.map(k=>`<div class="chip ${curCats.has(k)?'on':''}" data-cat="${k}" onclick="pickCat('${k}')">${CAT_LABEL[k]}</div>`).join('');
+  c.innerHTML=CATS.map(k=>`<div class="chip ${curCats.has(k)?'on':''}" data-cat="${k}" onclick="pickCat('${k}')">${GLABEL[k]}</div>`).join('');
   const esel=document.getElementById('examCat');
-  if(esel)esel.innerHTML=CATS.map(k=>`<option value="${k}">${CAT_LABEL[k]}</option>`).join('');
+  if(esel)esel.innerHTML=CATS.map(k=>`<option value="${k}">${GLABEL[k]}</option>`).join('');
   const wt=document.getElementById('weightedTgl'); if(wt)wt.checked=state.settings.weighted!==false;
   buildDeck(true); render(); updateBar();
 }
@@ -250,7 +259,8 @@ function pickCat(k){
 function catKey(){return [...curCats].sort().join(',')}
 function buildDeck(restore){
   reviewMode=false;
-  const pool=QUESTION_BANK.filter(q=>curCats.has('전체')||curCats.has(q.cat));
+  const sel=expandCats();
+  const pool=QUESTION_BANK.filter(q=>!sel||sel.has(q.cat));
   const s=state.session;
   if(restore&&s&&s.key===catKey()&&Array.isArray(s.order)){
     const byId={}; pool.forEach(q=>{if(q.id)byId[q.id]=q});
@@ -345,12 +355,12 @@ function renderStat(){
   document.getElementById('kStreak').textContent=state.streak;
   document.getElementById('kWrong').textContent=state.wrong.length;
   const byCat={};
-  Object.values(state.done).forEach(d=>{byCat[d.cat]=byCat[d.cat]||{n:0,o:0};byCat[d.cat].n++;if(d.ok)byCat[d.cat].o++});
+  Object.values(state.done).forEach(d=>{const g=CAT2GROUP[d.cat]||d.cat;byCat[g]=byCat[g]||{n:0,o:0};byCat[g].n++;if(d.ok)byCat[g].o++});
   let h='';
   CATS.filter(k=>k!=='전체').forEach(k=>{
-    const b=byCat[k];const tot=QUESTION_BANK.filter(q=>q.cat===k).length;
+    const b=byCat[k];const tot=QUESTION_BANK.filter(q=>(GROUPS[k]||[]).includes(q.cat)).length;
     const r=b?Math.round(b.o/b.n*100):0;
-    h+=`<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${CAT_LABEL[k]}</span><span style="color:var(--tx2)">${b?b.o:0}/${b?b.n:0} · ${tot}문제 · ${r}%</span></div>
+    h+=`<div style="margin:10px 0"><div style="display:flex;justify-content:space-between;font-size:13px"><span>${GLABEL[k]}</span><span style="color:var(--tx2)">${b?b.o:0}/${b?b.n:0} · ${tot}문제 · ${r}%</span></div>
       <div class="bar" style="margin-top:4px"><i style="width:${r}%"></i></div></div>`;
   });
   document.getElementById('catStat').innerHTML=h;
@@ -398,7 +408,7 @@ let exam=null;
 function startExam(){
   const n=+document.getElementById('examNum').value;
   const cat=document.getElementById('examCat').value;
-  let pool=QUESTION_BANK.filter(q=>cat==='전체'||q.cat===cat);
+  let pool=QUESTION_BANK.filter(q=>cat==='전체'||(GROUPS[cat]||[]).includes(q.cat));
   pool=shuffle(pool.slice()).slice(0,Math.min(n,pool.length));
   if(pool.length===0){alert('해당 범위에 문제가 없습니다.');return}
   exam={qs:pool,i:0,answers:[],start:Date.now()};
