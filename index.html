@@ -302,7 +302,7 @@ function render(){
   area.innerHTML=`
    <div class="card">
      <div class="qmeta"><span class="tag">${CAT_LABEL[q.cat]||q.cat}</span><span><span class="star ${state.bookmarks.includes(q.id)?'on':''}" onclick="toggleBookmark('${q.id}')">${state.bookmarks.includes(q.id)?'★':'☆'} 별표</span> &nbsp; ${idx+1} / ${deck.length}</span></div>
-     <p class="qtext">${esc(q.q)}</p>
+     <p class="qtext">${qhtml(q.q)}</p>
      <div id="opts">${q.opts.map((o,i)=>`<div class="opt" onclick="choose(${i})"><div class="n">${'①②③④⑤'[i]}</div><div>${esc(o)}</div></div>`).join('')}</div>
      <div class="exp" id="exp"></div>
      <div class="btnrow">
@@ -398,7 +398,7 @@ function toggleWrongNote(){
   if(list.length===0){box.innerHTML='<div class="note">오답노트가 비어 있습니다 👍</div>';return}
   box.innerHTML='<div style="margin:14px 0 6px;font-weight:700">📕 오답노트 ('+list.length+'문제)</div>'+list.map(q=>`
     <div class="review-item">
-      <div class="rq">[${CAT_LABEL[q.cat]||q.cat}] ${esc(q.q)}</div>
+      <div class="rq">[${CAT_LABEL[q.cat]||q.cat}] ${qhtml(q.q)}</div>
       <div class="ans ok">정답 ${'①②③④⑤'[q.a]} ${esc(q.opts[q.a])}</div>
       <div class="rexp">${esc(q.exp)}<br>📎 ${esc(q.src)}</div>
     </div>`).join('');
@@ -421,7 +421,7 @@ function renderExamQ(){
    <div class="examtop"><span class="t">🎯 모의고사</span><span>${e.i+1} / ${e.qs.length}</span></div>
    <div class="card">
      <div class="qmeta"><span class="tag">${CAT_LABEL[q.cat]||q.cat}</span><span>문항 ${e.i+1}</span></div>
-     <p class="qtext">${esc(q.q)}</p>
+     <p class="qtext">${qhtml(q.q)}</p>
      <div>${q.opts.map((o,i)=>`<div class="opt" onclick="answerExam(${i})"><div class="n">${sym[i]}</div><div>${esc(o)}</div></div>`).join('')}</div>
    </div>`;
 }
@@ -441,7 +441,7 @@ function finishExam(){
   const sec=Math.floor((Date.now()-e.start)/1000),mm=Math.floor(sec/60),ss=sec%60;
   const rev=e.qs.map((q,k)=>{const my=e.answers[k],c=my===q.a;return `
     <div class="review-item">
-      <div class="rq">${k+1}. [${CAT_LABEL[q.cat]||q.cat}] ${esc(q.q)}</div>
+      <div class="rq">${k+1}. [${CAT_LABEL[q.cat]||q.cat}] ${qhtml(q.q)}</div>
       <div class="ans ${c?'ok':'no'}">내 답 ${my!=null?sym[my]:'-'} ${c?'⭕':'❌'}</div>
       ${c?'':`<div class="ans ok">정답 ${sym[q.a]} ${esc(q.opts[q.a])}</div>`}
       <div class="rexp">${esc(q.exp)}<br>📎 ${esc(q.src)}</div>
@@ -469,6 +469,7 @@ document.querySelectorAll('.nav a').forEach(a=>a.onclick=e=>{
   a.classList.add('on');switchView(a.dataset.v);
 });
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function qhtml(s){return esc(s).replace(/\n/g,'<br>')}
 boot();
 </script>
 </body>
