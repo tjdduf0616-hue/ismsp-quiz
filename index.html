@@ -113,29 +113,12 @@
   <!-- 문제풀이 -->
   <section id="view-quiz">
     <div class="chips" id="cats"></div>
-    <div style="font-size:11px;color:var(--tx2);margin:1px 2px 0">칩을 여러 개 눌러 범위를 합쳐 풀 수 있어요</div>
-    <div id="quizArea"></div>
-  </section>
-
-  <!-- AI 생성 -->
-  <section id="view-ai" class="hide">
-    <div class="card">
-      <div class="title" style="font-size:16px">✨ AI 새 문제 생성 <span class="tag badge-ai">실시간</span></div>
-      <p style="color:var(--tx2);font-size:14px">내장된 문서 요약을 바탕으로 Claude가 새 객관식 문제를 만들어 줍니다.</p>
-      <div class="field"><label>출제 범위</label>
-        <select id="aiCat"></select></div>
-      <div class="field"><label>난이도</label>
-        <select id="aiLevel">
-          <option value="기본">기본 (개념 확인)</option>
-          <option value="실무" selected>실무 (심사 상황 적용)</option>
-          <option value="고난도">고난도 (함정·복합)</option>
-        </select></div>
-      <div class="field"><label>문항 수</label>
-        <select id="aiNum"><option>3</option><option selected>5</option><option>10</option></select></div>
-      <button class="b-pri" id="genBtn" style="margin-top:14px;width:100%" onclick="generateAI()">문제 생성</button>
-      <div id="aiMsg" class="note hide"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:1px 2px 0">
+      <span style="font-size:11px;color:var(--tx2)">칩을 여러 개 눌러 범위를 합쳐 풀 수 있어요</span>
+      <label style="font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
+        <input type="checkbox" id="weightedTgl" onchange="toggleWeighted()" style="width:auto;margin:0;accent-color:var(--pri)">오답·미풀이 우선</label>
     </div>
-    <div id="aiArea"></div>
+    <div id="quizArea"></div>
   </section>
 
   <!-- 통계 -->
@@ -170,15 +153,7 @@
           <input id="curUserBox" disabled style="flex:1">
           <button class="b-sec" style="flex:0 0 auto;width:auto;padding:12px 16px" onclick="logout()">로그아웃</button>
         </div></div>
-      <div class="field"><label>Claude API 키 (AI 생성용, 브라우저에만 저장)</label>
-        <input id="apiKey" type="password" placeholder="sk-ant-..." autocomplete="off"></div>
-      <div class="field"><label>모델</label>
-        <select id="model">
-          <option value="claude-3-5-haiku-20241022">claude-3-5-haiku (빠르고 저렴)</option>
-          <option value="claude-sonnet-4-5-20250929" selected>claude-sonnet-4-5 (권장)</option>
-        </select></div>
-      <button class="b-pri" style="width:100%;margin-top:14px" onclick="saveSettings()">저장</button>
-      <div class="note"><b>안내</b> · API 키는 이 기기 브라우저(localStorage)에만 저장되며 외부로 전송되지 않습니다(Claude API 직접 호출 시에만 사용). 키 발급: <a class="link" href="https://console.anthropic.com" target="_blank">console.anthropic.com</a> · AI 생성 호출당 소액 요금이 발생합니다. 키가 없어도 <b>고정 문제은행은 무료로</b> 풀 수 있습니다.</div>
+      <div class="note">⚠️ 기록은 이 기기 브라우저(localStorage)에만 저장됩니다(기기 간 동기화 없음). 문제·해설은 시험 직전 최신 법령·고시로 한 번 더 확인하세요.</div>
     </div>
   </section>
 
@@ -200,38 +175,19 @@
 <nav class="nav">
   <a href="#" class="on" data-v="quiz"><span class="ic">📝</span>문제풀이</a>
   <a href="#" data-v="exam"><span class="ic">🎯</span>모의고사</a>
-  <a href="#" data-v="ai"><span class="ic">✨</span>AI 생성</a>
   <a href="#" data-v="stat"><span class="ic">📊</span>현황</a>
   <a href="#" data-v="set"><span class="ic">⚙️</span>설정</a>
 </nav>
 
 <script src="questions.js"></script>
 <script>
-/* ====== 문서 요약(AI 생성 근거 컨텍스트) ====== */
-const DOC_CONTEXT = {
-"가명":"가명정보 처리 가이드라인(2026.03). 가명정보=추가정보 없이는 특정 개인 식별 불가하게 처리. 동의 없이 처리 가능 목적=통계작성·과학적 연구·공익적 기록보존(특례 제28조의2~7). 가명처리 절차 5단계: ①사전 준비(목적 설정·대상 선정) ②위험성 검토(식별자·준식별자, 재식별 위험) ③가명처리(삭제·대체·범주화·마스킹·총계) ④적정성 검토(외부 전문가 포함) ⑤안전한 관리. 식별자 원칙 삭제. 추가정보 분리보관·삭제, 접근통제, 접속기록. 재식별 금지(제28조의5), 재식별 시 즉시 중지·회수·파기. 서로 다른 처리자 간 결합=결합전문기관 통해, 반출은 반출심사 승인. 가명정보엔 열람·전송·정정삭제·처리정지 등 일부 권리 적용제외(제28조의7). 비정형데이터(이미지·영상·음성) 가명처리 기준. 익명처리 우선 고려, 곤란 시 가명처리.",
-"직책":"CISO/CPO. CISO(정보통신망법 제45조의3): 정보통신서비스 제공자가 지정·과기정통부장관에 신고. 4대 업무=정보보호 계획 수립·시행·개선, 실태·관행 정기 감사·개선, 위험 식별·평가·대책, 교육·모의훈련(연1회 이상). 겸직 가능=정보보호공시·정보통신기반보호법 책임자·전자금융 CISO·개보법 CPO. 겸직 제한은 '업무'에 대한 제한. 전담(겸직금지)=자산총액 5조원 이상 또는 ISMS 의무대상 중 5천억원 이상. CPO(개인정보보호법 제31조): 처리자가 지정, 미지정 시 사업주·대표가 CPO. 업무=보호계획 수립시행, 처리실태 정기조사개선, 불만처리·피해구제, 내부통제시스템 구축, 보호교육, 개인정보파일 보호관리감독, 처리방침 수립변경시행. 독립성 보장·불이익 금지. 일정 규모는 전문성 요건. 성명·연락처를 처리방침에 공개. 보호위가 CPO 교육 운영.",
-"AI":"생성형 AI 개인정보 처리 안내서: 개발·활용 4단계=①목적 설정 ②전략 수립 ③AI 학습 및 개발 ④시스템 적용 및 관리(+AI 프라이버시 거버넌스 체계). 인터넷 공개 개인정보를 AI 학습에 활용 시 적법근거=정당한 이익(법 제15조1항6호), 3요건=목적의 정당성·처리의 필요성·이익형량(정당한 이익이 정보주체 권리에 명백히 우선). 비정형데이터(이미지·영상·음성)는 비정형 데이터 가명처리 기준에 따라 가명처리. 서비스 단계: 이용자 입력(프롬프트) 데이터 적법·안전 처리, 처리방침 투명성, 정보주체 권리보장. 개인정보 영향평가로 위험요인 분석·개선. 관련 사례: AI 챗봇 목적외이용 과징금, 딥시크 국외이전·처리방침 시정권고.",
-"고난도":"함정·숫자 암기 핵심. 인증기준 총 101개(16+64+21, 102 아님). 접속기록 1년이상, 2년이상=5만명이상·고유식별·민감정보 처리. 유출 신고요건: ①1천명이상 ②민감정보·고유식별정보 ③외부 불법접근, 72시간내 신고·통지. 보완조치 40일내 완료, 최대 60일 연장, 총 100일. 인증위원회 35명이하. 보수교육 3년 42시간(필수7+선택35), 자격 3년 갱신. 심사원 요건: 심사원 4회·20일, 선임심사원 ISMS-P 3회·15일. 의무대상 매출 100억(정보통신서비스부문)·이용자 100만명·매출세입 1500억. 인터넷망차단 직전3개월 일일평균 100만명. 재해재난(제11조) 10만명(대기업·중견·공공)/100만명(중소·단체). 내부관리계획 1만명미만 소상공인 생략. 만14세미만 법정대리인 동의. 안전성조치 본칙 2023.9.15, 공공시스템 추가조치 2024.9.15. 고유식별정보 4종=주민·여권·운전면허·외국인등록번호. 파기 지체없이(정당사유없으면 5일내).",
-"암기":"법령 열거 암기항목. CISO 업무(망법 제45조의3제4항): ①정보보호 계획 수립·시행·개선 ②정보보호 실태·관행 정기 감사·개선 ③정보보호 위험 식별·평가 및 대책 마련 ④정보보호 교육·모의훈련(연1회 이상) 수립·시행. CPO 업무(개인정보보호법 제31조): 보호계획 수립·시행, 처리실태 정기조사·개선, 불만처리·피해구제, 내부통제시스템 구축, 보호교육 계획 수립·시행, 개인정보파일 보호·관리감독, 처리방침 수립·변경·시행. 처리방침 필수기재(제30조): 처리목적, 처리·보유기간, 제3자제공, 위탁, 정보주체 권리·의무·행사방법, 보호책임자 연락처, 처리하는 개인정보 항목, 파기 절차·방법, 쿠키 설치·운영·거부. 수집이용 동의 고지사항(제15조2항): 목적, 항목, 보유이용기간, 거부권·불이익. 제3자제공 추가(제17조): 제공받는 자, 그 이용목적. 내부관리계획 포함(안전성 제4조): 보호조직 구성운영, 책임자 자격·지정, 역할·책임, 관리감독·교육, 접근권한관리, 접근통제, 암호화, 접속기록 보관점검, 악성프로그램방지, 취약점점검, 물리적안전조치, 출력복사 안전조치, 파기, 유출대응계획, 위험분석관리, 수탁자 관리감독. 유출통지(제34조): 유출항목, 유출시점·경위, 정보주체 대응방법, 처리자 대응조치·피해구제절차, 신고접수 담당부서·연락처. 위탁문서(제26조1항): 목적외 처리금지, 기술적·관리적 보호조치, 재위탁제한, 접근제한 등 안전조치, 관리감독, 손해배상. 고유식별정보: 주민등록번호·여권번호·운전면허번호·외국인등록번호. 민감정보: 사상신념, 노조·정당 가입탈퇴, 정치적견해, 건강·성생활, 유전정보, 범죄경력, 인종민족, 생체인식정보. CCTV 안내판(제25조4항): 설치목적·장소, 촬영범위·시간, 관리책임자 성명·연락처, 수탁자 명칭·연락처. 정보주체 권리(제4조): 정보제공받을권리, 동의여부·범위 선택권, 열람·전송요구, 처리정지·정정·삭제·파기 요구, 피해구제, 자동화결정 거부·설명요구.",
-"제도":"ISMS-P 인증제도: 인증기준 총 101개(관리체계16+보호대책64+개인정보21). 심사종류 최초·사후·갱신. 최초심사 후 유효기간 3년, 사후심사는 매년 1회 이상, 갱신심사는 만료 전. 의무대상: ISP(서울·모든 광역시), IDC, 정보통신서비스부문 전년매출 100억 이상, 전년 일일평균 이용자 100만명 이상, 매출·세입 1500억 이상 중 상급종합병원·재학생 1만명 이상 학교. 인증기관 KISA, 심사기관 다수. ISMS는 80개, ISMS-P는 101개 적용.",
-"관리":"1.관리체계 수립 및 운영(16개): 1.1 기반마련(경영진 참여, 최고책임자 지정, 조직구성, 범위설정, 정책수립, 자원할당), 1.2 위험관리(정보자산 식별, 현황·흐름분석, 위험평가, 보호대책 선정), 1.3 운영(보호대책 구현·공유·운영현황관리), 1.4 점검·개선(법적요구사항 준수검토, 관리체계 점검, 관리체계 개선). 경영진 참여 보고체계 문서화, 위험평가 후 수용수준(DoA) 초과 위험에 보호대책·이행계획 수립.",
-"보호":"2.보호대책 요구사항(12분야 64개): 2.1정책,2.2인적보안(직무자지정,직무분리,보안서약,교육,퇴직관리),2.3외부자보안,2.4물리보안(보호구역,출입통제,반출입),2.5인증권한(계정·식별·인증·비밀번호·특수권한·권한검토),2.6접근통제(네트워크·시스템·응용·DB·무선·원격·인터넷접속),2.7암호화(정책·키관리),2.8개발보안(요구사항·시험운영분리·시험데이터·소스관리·이관),2.9시스템운영(변경·장애·백업·로그·접속기록점검·시간동기화·재사용폐기),2.10시스템보안(보안시스템·클라우드보안·공개서버·전자거래·단말기·보조매체·패치·악성코드),2.11사고대응,2.12재해복구. 외부 접속 시 안전한 인증·접속수단, 시험에 운영데이터 사용 시 가명·익명처리.",
-"개인정보":"3.개인정보 처리 단계별 요구사항(21개): 3.1수집(수집이용,최소수집,민감정보·고유식별·주민번호,간접수집,영상정보,마케팅), 3.2보유이용(현황관리,품질,단말기접근보호,목적외이용제공,가명정보), 3.3제공(제3자제공,위탁,영업양도,국외이전), 3.4파기(파기,보유시조치), 3.5권리보호(처리방침공개,권리보장,통지). 최소수집 원칙, 주민번호는 법령근거시만, 만14세미만 법정대리인 동의, 목적외이용은 별도동의·법률규정시만, 파기는 지체없이(정당사유없으면 5일내), 위탁자는 수탁자 교육·감독 책임.",
-"법령":"관련법령: 개인정보보호법, 정보통신망법, 신용정보법 등. 정보주체 권리: 열람·정정삭제·처리정지·손해배상·자동화의사결정 거부. 유출 신고 72시간내. 내부관리계획 1만명 미만 소상공인 등 완화. CPO 업무: 보호계획 수립시행, 실태점검개선, 고충처리, 내부통제. 손해배상책임(법정·징벌적·법정손해배상).",
-"안전성":"개인정보의 안전성 확보조치 기준: 접속기록 1년이상(5만명이상 또는 고유식별·민감정보 처리시 2년이상) 보관. 비밀번호 일방향암호화. 인터넷망 차단: 전년말 직전3개월 일일평균 이용자 100만명 이상. 취급자 변경·퇴직 시 지체없이 권한 변경·말소. 재해재난 대비(제11조): 10만명이상 대기업·중견·공공 또는 100만명이상 중소기업·단체. 공공시스템 추가조치(14~17조) 2024.9.15 시행. 단일접속·표준배포·개별시스템 구분.",
-"보안기사":"정보보안기사 기출유형. 네트워크: OSI 7계층(3계층 IP·라우팅), TCP 3-way(SYN→SYN/ACK→ACK), SYN flooding(가용성), ARP 스푸핑(MAC 위조 MITM), DNS 캐시 포이즈닝, 스니핑(수동)/스푸핑(능동), 포트스캔(nmap), 세션 하이재킹. 시스템: 버퍼오버플로우(ASLR·DEP·카나리), 리눅스 SetUID(권한상승), /etc/shadow(해시저장). 접근통제: DAC(소유자)/MAC(라벨)/RBAC(역할), BLP(기밀성 No Read Up·No Write Down), Biba(무결성 반대), Kerberos(대칭키 티켓 KDC). 암호: 블록모드 ECB(취약)/CBC/CTR/GCM, 대칭(AES·DES·SEED·ARIA)/공개키(RSA 소인수분해·ECC), DH(키교환), HMAC(무결성·인증), 해시(SHA·MD5). 관리: 디지털포렌식(무결성 해시·연계보관성), 침해사고대응(준비→탐지분석→봉쇄근절복구→사후), CC(EAL1~7), 위험분석(ALE=SLE×ARO), OWASP Top10.",
-"보안기술":"정보보안 기술: CIA(기밀성·무결성·가용성). 접근통제=방화벽(정책기반 트래픽 허용·차단), IDS(탐지)/IPS(인라인 차단), WAF(SQLi·XSS 등 웹공격 방어), NAC(단말 접근통제), VPN/IPSec(암호화 터널), DMZ(공개서버 분리). 인증=OTP/MFA(지식·소유·생체 결합), SSO/IAM, PKI/X.509 인증서(CA가 발급), RADIUS. 암호=대칭키(빠름, 키분배 어려움)/비대칭키(공개키·개인키, 기밀성은 수신자 공개키로 암호화), 전자서명(송신자 개인키 서명→무결성·인증·부인방지), 해시(일방향·충돌저항, 비밀번호 일방향 저장), SSL/TLS(전송 암호화), TDE(DB 저장 암호화), DLP(유출방지), 디가우저/파쇄(매체 폐기), WPA3(무선). 탐지=Anti-Virus, SIEM/ESM(로그 상관분석). 공격=SQLi(파라미터화 쿼리), XSS(출력 인코딩), CSRF(토큰), DDoS(가용성·트래픽정화), 랜섬웨어(백업).",
-"클라우드":"클라우드 보안(2.10.2)·취약점 점검: 책임공유모델(IaaS/PaaS/SaaS에 따라 이용기관·CSP 책임경계 상이, IaaS는 이용기관 책임 큼). 주요사고원인=설정오류(버킷 퍼블릭공개,과도한 IAM권한,보안그룹 미흡). 이용기관 책임영역 통제(설정·접근통제·로그) 적용. 가상자산사업자: 콜드월렛 보관,핫월렛 비중제한,개인키 분산·암호화,다중서명."
-};
-
 /* ====== 상태 (회원별 기록) ====== */
 const APP_PREFIX='ismsp_app_v1__', USERS_KEY='ismsp_users', CUR_KEY='ismsp_current';
 let curUser=null;
-const defaultState=()=>({done:{},wrong:[],bookmarks:[],streak:0,settings:{key:'',model:'claude-sonnet-4-5-20250929'}});
+const defaultState=()=>({done:{},wrong:[],bookmarks:[],streak:0,session:null,settings:{weighted:true}});
 let state=defaultState();
 function lsKey(){return APP_PREFIX+curUser}
-function load(){try{const s=JSON.parse(localStorage.getItem(lsKey()));if(s)state={...defaultState(),...s}}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem(lsKey()));if(s){const d=defaultState();state={...d,...s,settings:{...d.settings,...(s.settings||{})}};}}catch(e){}}
 function save(){if(curUser)localStorage.setItem(lsKey(),JSON.stringify(state))}
 function getUsers(){try{return JSON.parse(localStorage.getItem(USERS_KEY))||{}}catch(e){return{}}}
 function saveUsers(u){localStorage.setItem(USERS_KEY,JSON.stringify(u))}
@@ -267,21 +223,19 @@ function boot(){
   } else { document.getElementById('loginOverlay').style.display='flex'; }
 }
 
-let curCats=new Set(['전체']), deck=[], idx=0, answered=false, aiDeck=[];
+let curCats=new Set(['전체']), deck=[], idx=0, answered=false, reviewMode=false;
 const CATS=['전체','고난도','암기','AI','가명','직책','제도','관리','보호','개인정보','법령','안전성','클라우드','보안기술','보안기사'];
 const CAT_LABEL={전체:'전체',고난도:'🔥고난도',암기:'⭐암기항목',AI:'🤖AI·신기술',가명:'🧬가명처리',직책:'👔CISO/CPO',제도:'인증제도',관리:'관리체계',보호:'보호대책',개인정보:'개인정보',법령:'법령',안전성:'안전성조치',클라우드:'클라우드',보안기술:'🛡️보안기술',보안기사:'📡보안기사'};
 
 /* ====== 초기화 ====== */
 function init(){
+  if(state.session&&Array.isArray(state.session.cats)&&state.session.cats.length)curCats=new Set(state.session.cats);
   const c=document.getElementById('cats');
   c.innerHTML=CATS.map(k=>`<div class="chip ${curCats.has(k)?'on':''}" data-cat="${k}" onclick="pickCat('${k}')">${CAT_LABEL[k]}</div>`).join('');
-  const sel=document.getElementById('aiCat');
-  sel.innerHTML=CATS.filter(k=>k!=='전체').map(k=>`<option value="${k}">${CAT_LABEL[k]}</option>`).join('');
   const esel=document.getElementById('examCat');
   if(esel)esel.innerHTML=CATS.map(k=>`<option value="${k}">${CAT_LABEL[k]}</option>`).join('');
-  document.getElementById('apiKey').value=state.settings.key||'';
-  document.getElementById('model').value=state.settings.model;
-  buildDeck(); render(); updateBar();
+  const wt=document.getElementById('weightedTgl'); if(wt)wt.checked=state.settings.weighted!==false;
+  buildDeck(true); render(); updateBar();
 }
 function pickCat(k){
   if(k==='전체'){ curCats=new Set(['전체']); }
@@ -291,11 +245,35 @@ function pickCat(k){
     if(curCats.size===0)curCats=new Set(['전체']);
   }
   document.querySelectorAll('#cats .chip').forEach(e=>e.classList.toggle('on',curCats.has(e.dataset.cat)));
-  buildDeck();idx=0;render();
+  buildDeck(false);render();
 }
-function buildDeck(){
-  deck=QUESTION_BANK.filter(q=>curCats.has('전체')||curCats.has(q.cat));
-  deck=shuffle(deck.slice());
+function catKey(){return [...curCats].sort().join(',')}
+function buildDeck(restore){
+  reviewMode=false;
+  const pool=QUESTION_BANK.filter(q=>curCats.has('전체')||curCats.has(q.cat));
+  const s=state.session;
+  if(restore&&s&&s.key===catKey()&&Array.isArray(s.order)){
+    const byId={}; pool.forEach(q=>{if(q.id)byId[q.id]=q});
+    const ordered=s.order.map(id=>byId[id]).filter(Boolean);
+    const seen=new Set(s.order);
+    const extra=pool.filter(q=>!q.id||!seen.has(q.id)); // 새로 추가된 문항은 뒤에 붙임
+    deck=ordered.concat(shuffle(extra.slice()));
+    idx=Math.min(s.idx||0,deck.length);
+  }else{
+    deck=weightedOrder(pool); idx=0; persistSession();
+  }
+}
+function weightedOrder(pool){
+  if(state.settings.weighted===false)return shuffle(pool.slice());
+  const w=q=>state.wrong.includes(q.id)?3:(!state.done[q.id]?2:1); // 오답3 > 미풀이2 > 정답1
+  return pool.slice().map(q=>({q,k:Math.pow(Math.random(),1/w(q))}))
+    .sort((a,b)=>b.k-a.k).map(x=>x.q);
+}
+function persistSession(){state.session={key:catKey(),cats:[...curCats],order:deck.map(q=>q.id),idx:idx};save();}
+function persistIdx(){if(!reviewMode&&state.session&&state.session.key===catKey()){state.session.idx=idx;save();}}
+function toggleWeighted(){
+  state.settings.weighted=document.getElementById('weightedTgl').checked;
+  save();buildDeck(false);render();
 }
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
@@ -306,7 +284,7 @@ function render(){
   if(idx>=deck.length){
     const n=deck.length;
     area.innerHTML=`<div class="card center"><div class="big">🎉</div><p style="font-weight:700">이 범위(${n}문제)를 모두 풀었어요!</p>
-      <div class="btnrow"><button class="b-pri" onclick="buildDeck();idx=0;render()">다시 섞어 풀기</button></div></div>`;
+      <div class="btnrow"><button class="b-pri" onclick="buildDeck(false);render()">다시 섞어 풀기</button></div></div>`;
     return;
   }
   answered=false;
@@ -346,8 +324,8 @@ function grade(q,i,optsEl,expEl){
     save(); updateBar();
   }
 }
-function next(){if(!answered)return; idx++; render()}
-function skip(){idx++; render()}
+function next(){if(!answered)return; idx++; persistIdx(); render()}
+function skip(){idx++; persistIdx(); render()}
 
 function updateBar(){
   const tot=QUESTION_BANK.length;
@@ -379,11 +357,12 @@ function renderStat(){
 }
 function reviewWrong(){
   if(state.wrong.length===0){alert('오답노트가 비어 있습니다 👍');return}
+  reviewMode=true;
   deck=shuffle(QUESTION_BANK.filter(q=>state.wrong.includes(q.id)));idx=0;
   document.querySelectorAll('.nav a').forEach(x=>x.classList.toggle('on',x.dataset.v==='quiz'));
   switchView('quiz');render();
 }
-function resetProgress(){if(confirm('학습 기록을 모두 지울까요? (별표 포함)')){state.done={};state.wrong=[];state.bookmarks=[];state.streak=0;save();updateBar();renderStat();document.getElementById('wrongNote').innerHTML='';render()}}
+function resetProgress(){if(confirm('학습 기록을 모두 지울까요? (별표 포함)')){state.done={};state.wrong=[];state.bookmarks=[];state.streak=0;state.session=null;save();updateBar();renderStat();document.getElementById('wrongNote').innerHTML='';buildDeck(false);render()}}
 
 /* ====== 별표(북마크) ====== */
 function navTo(v){document.querySelectorAll('.nav a').forEach(x=>x.classList.toggle('on',x.dataset.v===v));switchView(v);}
@@ -398,6 +377,7 @@ function toggleBookmark(id){
 function reviewBookmarks(){
   const list=QUESTION_BANK.filter(q=>state.bookmarks.includes(q.id));
   if(list.length===0){alert('별표한 문제가 없습니다. 문제풀이 화면에서 ☆ 별표를 눌러 추가하세요.');return}
+  reviewMode=true;
   deck=shuffle(list.slice());idx=0;navTo('quiz');render();
 }
 /* ====== 오답노트 보기전용 ====== */
@@ -468,65 +448,9 @@ function finishExam(){
 }
 function resetExam(){exam=null;document.getElementById('examArea').innerHTML='';document.getElementById('examSetup').classList.remove('hide');}
 
-/* ====== AI 생성 ====== */
-function saveSettings(){
-  state.settings.key=document.getElementById('apiKey').value.trim();
-  state.settings.model=document.getElementById('model').value;
-  save();alert('저장되었습니다.');
-}
-async function generateAI(){
-  const key=state.settings.key;
-  const msg=document.getElementById('aiMsg');
-  msg.classList.remove('hide');
-  if(!key){msg.innerHTML='⚠️ 먼저 <b>설정</b> 탭에서 Claude API 키를 입력하세요.';return}
-  const cat=document.getElementById('aiCat').value;
-  const level=document.getElementById('aiLevel').value;
-  const num=document.getElementById('aiNum').value;
-  const btn=document.getElementById('genBtn');
-  btn.disabled=true;btn.innerHTML='<span class="spin"></span>생성 중...';
-  msg.innerHTML='Claude가 새 문제를 만들고 있어요...';
-  const ctx=DOC_CONTEXT[cat];
-  const prompt=`당신은 한국 ISMS-P 인증심사원 자격 출제위원입니다. 아래 [근거자료]만을 사실 근거로 사용하여 4지선다 객관식 문제 ${num}개를 만드세요. 난이도: ${level}.
-규칙: 근거자료에 없는 사실을 지어내지 말 것. 보기 4개 중 정답은 1개. 해설은 2~3문장. 출처는 근거자료에 근거한 문서/조항명. 반드시 아래 JSON 배열 형식만 출력(설명 금지).
-형식: [{"q":"문항","opts":["①","②","③","④"],"a":정답인덱스(0~3),"exp":"해설","src":"출처"}]
-[근거자료/${cat}]\n${ctx}`;
-  try{
-    const r=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:state.settings.model,max_tokens:3000,messages:[{role:'user',content:prompt}]})
-    });
-    if(!r.ok){const e=await r.text();throw new Error('API 오류 '+r.status+': '+e.slice(0,200))}
-    const data=await r.json();
-    let txt=data.content[0].text.trim();
-    txt=txt.replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
-    const arr=JSON.parse(txt);
-    aiDeck=arr.map((q,i)=>({...q,cat:cat,id:null,_ai:true}));
-    msg.innerHTML=`✅ ${aiDeck.length}문제를 생성했습니다. 아래에서 풀어보세요.`;
-    renderAIDeck();
-  }catch(err){
-    msg.innerHTML='❌ 생성 실패: '+esc(err.message)+'<br><span style="color:var(--tx2)">키가 올바른지, 결제수단/한도가 설정됐는지 확인하세요.</span>';
-  }finally{btn.disabled=false;btn.textContent='문제 생성';}
-}
-function renderAIDeck(){
-  const a=document.getElementById('aiArea');
-  a.innerHTML=aiDeck.map((q,qi)=>`
-   <div class="card">
-     <div class="qmeta"><span class="tag badge-ai">AI · ${CAT_LABEL[q.cat]}</span><span>${qi+1} / ${aiDeck.length}</span></div>
-     <p class="qtext">${esc(q.q)}</p>
-     <div id="aopts${qi}">${q.opts.map((o,i)=>`<div class="opt" onclick="gradeAI(${qi},${i})"><div class="n">${'①②③④⑤'[i]}</div><div>${esc(o)}</div></div>`).join('')}</div>
-     <div class="exp" id="aexp${qi}"></div>
-   </div>`).join('');
-}
-function gradeAI(qi,i){
-  const q=aiDeck[qi];const opts=document.getElementById('aopts'+qi);
-  if(opts.dataset.done)return;opts.dataset.done=1;
-  grade(q,i,opts,document.getElementById('aexp'+qi));
-}
-
 /* ====== 네비 ====== */
 function switchView(v){
-  ['quiz','exam','ai','stat','set'].forEach(x=>document.getElementById('view-'+x).classList.toggle('hide',x!==v));
+  ['quiz','exam','stat','set'].forEach(x=>document.getElementById('view-'+x).classList.toggle('hide',x!==v));
   if(v==='stat')renderStat();
 }
 document.querySelectorAll('.nav a').forEach(a=>a.onclick=e=>{

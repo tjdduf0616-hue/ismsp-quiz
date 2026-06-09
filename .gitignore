@@ -1,0 +1,21 @@
+node_modules/
+.DS_Store
+Thumbs.db
+*.log
+.vscode/*.local
+.idea/
+# 작업용 임시 파일
+tmp/
+*.tmp
+
+# 학습자료(로컬 전용, 공개 저장소에 올리지 않음)
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.docx
+*.pptx
+*.hwp
+*.hwpx
+문제/
+특강자료/
