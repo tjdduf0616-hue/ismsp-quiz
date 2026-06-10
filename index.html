@@ -55,6 +55,9 @@
   .nav a{flex:1;text-align:center;padding:11px 0 14px;color:var(--tx2);font-size:11px;text-decoration:none;font-weight:600}
   .nav a.on{color:var(--pri2)}
   .nav a .ic{display:block;font-size:20px;margin-bottom:2px}
+  #nextBar{position:fixed;left:0;right:0;bottom:60px;z-index:25;display:none;padding:12px 14px 6px;background:linear-gradient(180deg,rgba(13,17,23,0),var(--bg) 55%);pointer-events:none}
+  #nextBar .inner{max-width:680px;margin:0 auto}
+  #nextBar button{width:100%;pointer-events:auto;box-shadow:0 6px 18px rgba(0,0,0,.5);font-size:16px;padding:15px}
 
   .field{margin-top:14px} .field label{display:block;font-size:13px;color:var(--tx2);margin-bottom:6px;font-weight:600}
   input,select,textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;color:var(--tx);padding:12px;font-size:15px;font-family:inherit}
@@ -182,6 +185,7 @@
   </section>
 </div>
 
+<div id="nextBar"><div class="inner"><button class="b-pri" onclick="next()">다음 문제 ▶</button></div></div>
 <nav class="nav">
   <a href="#" class="on" data-v="quiz"><span class="ic">📝</span>문제풀이</a>
   <a href="#" data-v="exam"><span class="ic">🎯</span>모의고사</a>
@@ -327,6 +331,7 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random
 
 /* ====== 렌더 ====== */
 function render(){
+  const nb=document.getElementById('nextBar'); if(nb)nb.style.display='none';
   const area=document.getElementById('quizArea');
   if(deck.length===0){area.innerHTML='<div class="card">문제가 없습니다.</div>';return}
   if(idx>=deck.length){
@@ -364,6 +369,7 @@ function grade(q,i,optsEl,expEl){
     <div>${esc(q.exp)}</div><div class="src">📎 <b>출처</b> · ${esc(q.src)}</div>`;
   expEl.classList.add('show');
   document.getElementById('nextBtn').disabled=false;
+  const nb=document.getElementById('nextBar'); if(nb)nb.style.display='block';
   // 기록 (고정 문제만)
   if(q.id){
     if(!state.done[q.id]) state.done[q.id]={cat:q.cat};
@@ -427,6 +433,7 @@ function pickDefect(code){
     <div style="margin-top:6px">${esc(q.exp)}</div><div class="src">📎 <b>출처</b> · ${esc(q.src)}</div>`;
   exp.classList.add('show');
   document.getElementById('nextBtn').disabled=false;
+  const nb=document.getElementById('nextBar'); if(nb)nb.style.display='block';
   if(q.id){
     if(!state.done[q.id])state.done[q.id]={cat:q.cat};
     state.done[q.id].ok=ok;
@@ -585,6 +592,7 @@ function resetExam(){exam=null;document.getElementById('examArea').innerHTML='';
 /* ====== 네비 ====== */
 function switchView(v){
   ['quiz','exam','stat','set'].forEach(x=>document.getElementById('view-'+x).classList.toggle('hide',x!==v));
+  const nb=document.getElementById('nextBar'); if(nb&&v!=='quiz')nb.style.display='none';
   if(v==='stat')renderStat();
 }
 document.querySelectorAll('.nav a').forEach(a=>a.onclick=e=>{
