@@ -90,7 +90,9 @@
   .review-item .rexp{font-size:13px;color:var(--tx2);margin-top:8px;border-top:1px dashed var(--line);padding-top:8px}
   .pass{font-size:28px;font-weight:800} .pass.o{color:var(--ok)} .pass.x{color:var(--no)}
   .critwrap{max-height:46vh;overflow-y:auto;border:1px solid var(--line);border-radius:12px;background:var(--card2)}
-  .critdom{position:sticky;top:0;background:var(--card);color:var(--pri2);font-weight:800;font-size:12.5px;padding:7px 12px;border-bottom:1px solid var(--line);z-index:1}
+  .critdom{position:sticky;top:0;background:var(--card);color:var(--pri2);font-weight:800;font-size:12.5px;padding:9px 12px;border-bottom:1px solid var(--line);z-index:1;cursor:pointer;user-select:none}
+  .critdom .arr{display:inline-block;width:14px;color:var(--tx2)}
+  .critdom .cnt{float:right;color:var(--tx2);font-weight:600;background:var(--chip);border-radius:99px;padding:0 8px;font-size:11px}
   .critsub{color:var(--tx2);font-weight:700;font-size:11.5px;padding:5px 12px 4px;background:var(--card)}
   .crit{padding:9px 12px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13.5px;font-weight:700;color:var(--tx)}
   .crit .cn{color:var(--tx2);font-weight:500;margin-left:3px}
@@ -375,13 +377,19 @@ function next(){if(!answered)return; idx++; persistIdx(); render()}
 function skip(){idx++; persistIdx(); render()}
 
 /* ====== 결함사례 훈련 모드 (101개 기준 중 선택) ====== */
+const DOMS=[['1','1. 관리체계 수립 및 운영'],['2','2. 보호대책 요구사항'],['3','3. 개인정보 처리단계별 요구사항']];
 function renderDefect(q,area){
-  let list='', curD='', curS='';
-  for(const [c,n] of CRIT){
-    const d=c[0], sub=c.split('.').slice(0,2).join('.');
-    if(d!==curD){ curD=d; list+=`<div class="critdom">${d==='1'?'1. 관리체계 수립 및 운영':d==='2'?'2. 보호대책 요구사항':'3. 개인정보 처리단계별 요구사항'}</div>`; curS=''; }
-    if(sub!==curS){ curS=sub; list+=`<div class="critsub">${esc(SUBLABEL[sub]||sub)}</div>`; }
-    list+=`<div class="crit" data-code="${c}" data-t="${esc(c+' '+n)}" onclick="pickDefect('${c}')">${c} <span class="cn">${esc(n)}</span></div>`;
+  let list='';
+  for(const [d,dn] of DOMS){
+    const items=CRIT.filter(([c])=>c[0]===d);
+    let body='', curS='';
+    for(const [c,n] of items){
+      const sub=c.split('.').slice(0,2).join('.');
+      if(sub!==curS){ curS=sub; body+=`<div class="critsub">${esc(SUBLABEL[sub]||sub)}</div>`; }
+      body+=`<div class="crit" data-code="${c}" data-t="${esc(c+' '+n)}" onclick="pickDefect('${c}')">${c} <span class="cn">${esc(n)}</span></div>`;
+    }
+    list+=`<div class="critdom" onclick="toggleDom('${d}')"><span class="arr" id="arr-${d}">▶</span> ${dn} <span class="cnt">${items.length}</span></div>
+      <div class="critbody" id="critbody-${d}" style="display:none">${body}</div>`;
   }
   area.innerHTML=`
    <div class="card">
@@ -409,6 +417,8 @@ function pickDefect(code){
     if(el.dataset.code===correct)el.classList.add('correct');
     if(el.dataset.code===code&&!ok)el.classList.add('wrong');
   });
+  // 정답·선택 항목이 접힌 영역에 있으면 펼쳐서 보이게
+  [correct[0], code[0]].forEach(d=>{const b=document.getElementById('critbody-'+d); if(b&&b.style.display==='none')toggleDom(d);});
   const tgt=document.querySelector('#critwrap .crit[data-code="'+correct+'"]');
   if(tgt)tgt.scrollIntoView({block:'center'});
   const exp=document.getElementById('exp');
@@ -425,10 +435,25 @@ function pickDefect(code){
     save(); updateBar();
   }
 }
+function toggleDom(d){
+  const b=document.getElementById('critbody-'+d), a=document.getElementById('arr-'+d);
+  const open=b.style.display!=='none';
+  b.style.display=open?'none':'';
+  if(a)a.textContent=open?'▶':'▼';
+}
 function filterDefect(){
   const v=document.getElementById('critSearch').value.trim().toLowerCase();
-  document.querySelectorAll('#critwrap .crit').forEach(el=>{el.style.display=(!v||el.dataset.t.toLowerCase().includes(v))?'':'none';});
-  document.querySelectorAll('#critwrap .critdom,#critwrap .critsub').forEach(el=>{el.style.display=v?'none':'';});
+  if(v){ // 검색 중: 전체 펼치고 매칭만 표시, 소분류 헤더 숨김
+    document.querySelectorAll('#critwrap .critbody').forEach(b=>b.style.display='');
+    document.querySelectorAll('#critwrap .arr').forEach(a=>a.textContent='▼');
+    document.querySelectorAll('#critwrap .crit').forEach(el=>{el.style.display=el.dataset.t.toLowerCase().includes(v)?'':'none';});
+    document.querySelectorAll('#critwrap .critsub').forEach(el=>el.style.display='none');
+  } else { // 검색 비움: 기본(접힘)으로 복귀
+    document.querySelectorAll('#critwrap .critbody').forEach(b=>b.style.display='none');
+    document.querySelectorAll('#critwrap .arr').forEach(a=>a.textContent='▶');
+    document.querySelectorAll('#critwrap .crit').forEach(el=>el.style.display='');
+    document.querySelectorAll('#critwrap .critsub').forEach(el=>el.style.display='');
+  }
 }
 function hintDefect(){
   const q=deck[idx]; const d=critCode(q.opts[q.a])[0];
