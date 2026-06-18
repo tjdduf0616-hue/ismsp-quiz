@@ -27,6 +27,9 @@
   .topcat{display:flex;gap:8px;margin:6px 0 2px}
   .topcat button{flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card2);color:var(--tx2);font-size:14px;font-weight:800;cursor:pointer}
   .topcat button.on{background:var(--pri);color:#fff;border-color:var(--pri2)}
+  .subcat{display:flex;gap:8px;margin:8px 0 2px}
+  .subcat button{flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--line);background:var(--card2);color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer}
+  .subcat button.on{background:var(--card);color:var(--pri2);border-color:var(--pri2)}
   .chips{display:flex;gap:8px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
   .chips::-webkit-scrollbar{display:none}
   .chip{flex:0 0 auto;padding:7px 13px;border-radius:99px;background:var(--chip);color:var(--tx2);font-size:13px;border:1px solid transparent;font-weight:600}
@@ -131,10 +134,14 @@
   <section id="view-quiz">
     <div class="topcat" id="topcat">
       <button data-m="quiz" class="on" onclick="setMode('quiz')">📝 문제풀이</button>
-      <button data-m="defect" onclick="setMode('defect')">🧩 결함사례훈련</button>
+      <button data-m="cert" onclick="setMode('cert')">📋 인증기준훈련</button>
+    </div>
+    <div class="subcat hide" id="subcat">
+      <button data-s="defect" class="on" onclick="setSub('defect')">🧩 결함사례</button>
+      <button data-s="mainitem" onclick="setSub('mainitem')">📑 주요확인사항</button>
     </div>
     <div class="chips" id="cats"></div>
-    <div id="defectInfo" class="note hide" style="margin-top:10px">🧩 <b>결함사례 훈련</b> · 결함 상황을 읽고 <b>101개 인증기준</b> 중 정답을 직접 고르세요. (검색·힌트 활용)</div>
+    <div id="defectInfo" class="note hide" style="margin-top:10px"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin:3px 2px 0">
       <span id="chipHint" style="font-size:11px;color:var(--tx2)">칩을 여러 개 눌러 범위를 합쳐 풀 수 있어요</span>
       <label style="font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap">
@@ -246,12 +253,12 @@ function boot(){
   } else { document.getElementById('loginOverlay').style.display='flex'; }
 }
 
-let curCats=new Set(['전체']), deck=[], idx=0, answered=false, reviewMode=false, topMode='quiz';
+let curCats=new Set(['전체']), deck=[], idx=0, answered=false, reviewMode=false, topMode='quiz', certSub='defect';
 // 개별 문항 태그용 세부 라벨(문제 화면·통계 상세에 표시)
 const CAT_LABEL={전체:'전체',고난도:'🔥고난도',암기:'⭐암기항목',AI:'🤖AI·신기술',가명:'🧬가명처리',직책:'👔CISO/CPO',제도:'인증제도',관리:'관리체계',보호:'보호대책',개인정보:'개인정보','개인정보기준':'개인정보(인증기준)',법령:'법령',안전성:'안전성조치',클라우드:'클라우드',보안기술:'🛡️보안기술',보안기사:'📡기술실무','신기술':'🚀신기술','기준종합':'📋기준판단','결함사례':'🧩결함사례'};
 // 5개 묶음 그룹(칩·모의고사·통계에 표시) — 세부 cat 값을 그룹으로 묶음
-const GROUPS={'인증제도':['제도','직책'],'인증기준':['관리','보호','개인정보기준','기준종합'],'개인정보':['개인정보','법령','가명','AI'],'보안기술':['보안기술','안전성','클라우드','보안기사'],'신기술':['신기술'],'결함사례훈련':['결함사례']};
-const GLABEL={'전체':'전체','인증제도':'🏛 인증제도','인증기준':'📋 인증기준','개인정보':'🔐 개인정보','보안기술':'🛡 보안기술','신기술':'🚀 신기술','결함사례훈련':'🧩 결함사례훈련'};
+const GROUPS={'인증제도':['제도','직책'],'인증기준':['관리','보호','개인정보기준','기준종합'],'개보법(일반)':['개인정보','법령'],'개보법(AI·가명)':['가명','AI'],'보안기술':['보안기술','안전성','클라우드','보안기사'],'신기술':['신기술']};
+const GLABEL={'전체':'전체','인증제도':'🏛 인증제도','인증기준':'📋 인증기준','개보법(일반)':'🔐 개보법(일반)','개보법(AI·가명)':'🧬 개보법(AI·가명)','보안기술':'🛡 보안기술','신기술':'🚀 신기술'};
 const CATS=['전체',...Object.keys(GROUPS)];
 const QUIZ_CATS=CATS.filter(k=>k!=='결함사례훈련'); // 결함사례훈련은 상단 대분류로 분리
 const CAT2GROUP={}; Object.entries(GROUPS).forEach(([g,cs])=>cs.forEach(c=>CAT2GROUP[c]=g));
@@ -289,8 +296,11 @@ function critCode(opt){return (String(opt).match(/(\d\.\d+\.\d+)/)||[])[1]||'';}
 function init(){
   if(state.session){
     if(state.session.topMode)topMode=state.session.topMode;
+    if(topMode==='defect'){ topMode='cert'; certSub='defect'; } // 구버전 마이그레이션
+    if(state.session.certSub)certSub=state.session.certSub;
+    if(topMode!=='quiz'&&topMode!=='cert')topMode='quiz';
     if(Array.isArray(state.session.cats)&&state.session.cats.length){
-      curCats=new Set(state.session.cats.filter(k=>k==='전체'||(GROUPS[k]&&k!=='결함사례훈련')));
+      curCats=new Set(state.session.cats.filter(k=>k==='전체'||GROUPS[k]));
       if(curCats.size===0)curCats=new Set(['전체']);
     }
   }
@@ -312,20 +322,28 @@ function pickCat(k){
   document.querySelectorAll('#cats .chip').forEach(e=>e.classList.toggle('on',curCats.has(e.dataset.cat)));
   buildDeck(false);render();
 }
-function catKey(){return topMode+'|'+[...curCats].sort().join(',')}
+function catKey(){return topMode+'|'+(topMode==='cert'?certSub:'')+'|'+[...curCats].sort().join(',')}
 function applyModeUI(){
   const m=topMode;
   document.querySelectorAll('#topcat button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   const cats=document.getElementById('cats'); if(cats)cats.style.display=(m==='quiz')?'':'none';
-  const di=document.getElementById('defectInfo'); if(di)di.classList.toggle('hide',m!=='defect');
+  const sc=document.getElementById('subcat'); if(sc)sc.classList.toggle('hide',m!=='cert');
+  document.querySelectorAll('#subcat button').forEach(b=>b.classList.toggle('on',b.dataset.s===certSub));
   const ch=document.getElementById('chipHint'); if(ch)ch.style.display=(m==='quiz')?'':'none';
+  const di=document.getElementById('defectInfo');
+  if(di){ di.classList.toggle('hide',m!=='cert');
+    di.innerHTML=(certSub==='mainitem')
+      ?'📑 <b>주요확인사항 훈련</b> · 주요확인사항을 읽고 <b>101개 인증기준</b> 중 정답을 고르세요. (MVNO·가상자산·간편인증 변형은 [라벨] 표시)'
+      :'🧩 <b>결함사례 훈련</b> · 결함 상황을 읽고 <b>101개 인증기준</b> 중 정답을 직접 고르세요. (검색·힌트 활용)';
+  }
 }
 function setMode(m){ if(topMode===m)return; topMode=m; applyModeUI(); buildDeck(false); render(); window.scrollTo(0,0); }
+function setSub(s){ if(certSub===s)return; certSub=s; applyModeUI(); buildDeck(false); render(); window.scrollTo(0,0); }
 function buildDeck(restore){
   reviewMode=false;
   let pool;
-  if(topMode==='defect'){ pool=QUESTION_BANK.filter(q=>q.cat==='결함사례'); }
-  else{ const sel=expandCats(); pool=QUESTION_BANK.filter(q=>q.cat!=='결함사례'&&(!sel||sel.has(q.cat))); }
+  if(topMode==='cert'){ const c=(certSub==='mainitem')?'주요확인':'결함사례'; pool=QUESTION_BANK.filter(q=>q.cat===c); }
+  else{ const sel=expandCats(); pool=QUESTION_BANK.filter(q=>q.cat!=='결함사례'&&q.cat!=='주요확인'&&(!sel||sel.has(q.cat))); }
   const s=state.session;
   if(restore&&s&&s.key===catKey()&&Array.isArray(s.order)){
     const byId={}; pool.forEach(q=>{if(q.id)byId[q.id]=q});
@@ -344,7 +362,7 @@ function weightedOrder(pool){
   return pool.slice().map(q=>({q,k:Math.pow(Math.random(),1/w(q))}))
     .sort((a,b)=>b.k-a.k).map(x=>x.q);
 }
-function persistSession(){state.session={key:catKey(),cats:[...curCats],topMode:topMode,order:deck.map(q=>q.id),idx:idx};save();}
+function persistSession(){state.session={key:catKey(),cats:[...curCats],topMode:topMode,certSub:certSub,order:deck.map(q=>q.id),idx:idx};save();}
 function persistIdx(){if(!reviewMode&&state.session&&state.session.key===catKey()){state.session.idx=idx;save();}}
 function toggleWeighted(){
   state.settings.weighted=document.getElementById('weightedTgl').checked;
@@ -365,7 +383,7 @@ function render(){
   }
   answered=false;
   const q=deck[idx];
-  if(q.cat==='결함사례'){ renderDefect(q,area); return; }
+  if(q.cat==='결함사례'||q.cat==='주요확인'){ renderDefect(q,area); return; }
   area.innerHTML=`
    <div class="card">
      <div class="qmeta"><span class="tag">${CAT_LABEL[q.cat]||q.cat}</span><span><span class="star ${state.bookmarks.includes(q.id)?'on':''}" onclick="toggleBookmark('${q.id}')">${state.bookmarks.includes(q.id)?'★':'☆'} 별표</span> &nbsp; ${idx+1} / ${deck.length}</span></div>
@@ -422,7 +440,7 @@ function renderDefect(q,area){
   }
   area.innerHTML=`
    <div class="card">
-     <div class="qmeta"><span class="tag">🧩 결함사례</span><span><span class="star ${state.bookmarks.includes(q.id)?'on':''}" onclick="toggleBookmark('${q.id}')">${state.bookmarks.includes(q.id)?'★':'☆'} 별표</span> &nbsp; ${idx+1} / ${deck.length}</span></div>
+     <div class="qmeta"><span class="tag">${q.cat==='주요확인'?'📑 주요확인사항':'🧩 결함사례'}</span><span><span class="star ${state.bookmarks.includes(q.id)?'on':''}" onclick="toggleBookmark('${q.id}')">${state.bookmarks.includes(q.id)?'★':'☆'} 별표</span> &nbsp; ${idx+1} / ${deck.length}</span></div>
      <p class="qtext">${qhtml(q.q)}</p>
      <div class="exp" id="exp"></div>
      <div style="display:flex;gap:8px;margin:6px 0">
