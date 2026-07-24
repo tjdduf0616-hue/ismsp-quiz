@@ -25,7 +25,7 @@
   .stat{display:flex;justify-content:space-between;font-size:12px;color:var(--tx2);margin-top:6px}
 
   .topcat{display:flex;gap:8px;margin:6px 0 2px}
-  .topcat button{flex:1;padding:12px;border-radius:12px;border:1.5px solid var(--line);background:var(--card2);color:var(--tx2);font-size:14px;font-weight:800;cursor:pointer}
+  .topcat button{flex:1;padding:10px 4px;border-radius:11px;border:1.5px solid var(--line);background:var(--card2);color:var(--tx2);font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
   .topcat button.on{background:var(--pri);color:#fff;border-color:var(--pri2)}
   .subcat{display:flex;gap:8px;margin:8px 0 2px}
   .subcat button{flex:1;padding:9px;border-radius:10px;border:1.5px solid var(--line);background:var(--card2);color:var(--tx2);font-size:13px;font-weight:700;cursor:pointer}
@@ -137,6 +137,7 @@
       <button data-m="quiz" class="on" onclick="setMode('quiz')">📝 문제풀이</button>
       <button data-m="cert" onclick="setMode('cert')">📋 인증기준</button>
       <button data-m="cppg" onclick="setMode('cppg')">🪪 CPPG</button>
+      <button data-m="isrm" onclick="setMode('isrm')">⚠️ ISRM</button>
     </div>
     <div class="subcat hide" id="subcat">
       <button data-s="defect" class="on" onclick="setSub('defect')">🧩 결함사례</button>
@@ -267,8 +268,12 @@ const QUIZ_CATS=CATS.filter(k=>k!=='결함사례훈련'); // 결함사례훈련�
 const CPPG_CATS=['전체','CPPG1','CPPG2','CPPG3','CPPG4','CPPG5'];
 const CPPG_LABEL={'전체':'전체','CPPG1':'1.보호기초','CPPG2':'2.보호법','CPPG3':'3.처리실무','CPPG4':'4.기술·관리','CPPG5':'5.보안관리'};
 Object.assign(CAT_LABEL,{CPPG1:'🪪보호기초',CPPG2:'🪪보호법',CPPG3:'🪪처리실무',CPPG4:'🪪기술·관리',CPPG5:'🪪보안관리'});
+// ISRM(정보보호위험관리사) 5과목 — 별도 대분류
+const ISRM_CATS=['전체','ISRM1','ISRM2','ISRM3','ISRM4','ISRM5'];
+const ISRM_LABEL={'전체':'전체','ISRM1':'Ⅰ.위험관리계획','ISRM2':'Ⅱ.위험평가','ISRM3':'Ⅲ.위험대응','ISRM4':'Ⅳ.관리체계(심화)','ISRM5':'Ⅴ.위험대책(심화)'};
+Object.assign(CAT_LABEL,{ISRM1:'⚠️위험관리계획',ISRM2:'⚠️위험평가',ISRM3:'⚠️위험대응',ISRM4:'⚠️관리체계심화',ISRM5:'⚠️위험대책심화'});
 const CAT2GROUP={}; Object.entries(GROUPS).forEach(([g,cs])=>cs.forEach(c=>CAT2GROUP[c]=g));
-function expandCats(){if(curCats.has('전체'))return null;if(topMode==='cppg')return new Set([...curCats]);const out=new Set();curCats.forEach(g=>(GROUPS[g]||[]).forEach(c=>out.add(c)));return out;}
+function expandCats(){if(curCats.has('전체'))return null;if(topMode==='cppg'||topMode==='isrm')return new Set([...curCats]);const out=new Set();curCats.forEach(g=>(GROUPS[g]||[]).forEach(c=>out.add(c)));return out;}
 
 /* ====== 결함사례 훈련용: ISMS-P 인증기준 101개 ====== */
 const CRIT=[
@@ -304,9 +309,9 @@ function init(){
     if(state.session.topMode)topMode=state.session.topMode;
     if(topMode==='defect'){ topMode='cert'; certSub='defect'; } // 구버전 마이그레이션
     if(state.session.certSub)certSub=state.session.certSub;
-    if(topMode!=='quiz'&&topMode!=='cert'&&topMode!=='cppg')topMode='quiz';
+    if(topMode!=='quiz'&&topMode!=='cert'&&topMode!=='cppg'&&topMode!=='isrm')topMode='quiz';
     if(Array.isArray(state.session.cats)&&state.session.cats.length){
-      curCats=new Set(state.session.cats.filter(k=>k==='전체'||GROUPS[k]||/^CPPG/.test(k)));
+      curCats=new Set(state.session.cats.filter(k=>k==='전체'||GROUPS[k]||/^CPPG/.test(k)||/^ISRM/.test(k)));
       if(curCats.size===0)curCats=new Set(['전체']);
     }
   }
@@ -329,12 +334,12 @@ function pickCat(k){
 function catKey(){return topMode+'|'+(topMode==='cert'?certSub:'')+'|'+[...curCats].sort().join(',')}
 function renderChips(){
   const c=document.getElementById('cats'); if(!c)return;
-  const list=(topMode==='cppg')?CPPG_CATS:QUIZ_CATS;
-  const lab=(topMode==='cppg')?CPPG_LABEL:GLABEL;
+  const list=(topMode==='cppg')?CPPG_CATS:(topMode==='isrm')?ISRM_CATS:QUIZ_CATS;
+  const lab=(topMode==='cppg')?CPPG_LABEL:(topMode==='isrm')?ISRM_LABEL:GLABEL;
   c.innerHTML=list.map(k=>`<div class="chip ${curCats.has(k)?'on':''}" data-cat="${k}" onclick="pickCat('${k}')">${lab[k]}</div>`).join('');
 }
 function applyModeUI(){
-  const m=topMode; const showChips=(m==='quiz'||m==='cppg');
+  const m=topMode; const showChips=(m==='quiz'||m==='cppg'||m==='isrm');
   document.querySelectorAll('#topcat button').forEach(b=>b.classList.toggle('on',b.dataset.m===m));
   const cats=document.getElementById('cats'); if(cats)cats.style.display=showChips?'':'none';
   if(showChips)renderChips();
@@ -355,7 +360,8 @@ function buildDeck(restore){
   let pool;
   if(topMode==='cert'){ const c=(certSub==='mainitem')?'주요확인':'결함사례'; pool=QUESTION_BANK.filter(q=>q.cat===c); }
   else if(topMode==='cppg'){ const sel=expandCats(); pool=QUESTION_BANK.filter(q=>/^CPPG/.test(q.cat)&&(!sel||sel.has(q.cat))); }
-  else{ const sel=expandCats(); pool=QUESTION_BANK.filter(q=>q.cat!=='결함사례'&&q.cat!=='주요확인'&&!/^CPPG/.test(q.cat)&&(!sel||sel.has(q.cat))); }
+  else if(topMode==='isrm'){ const sel=expandCats(); pool=QUESTION_BANK.filter(q=>/^ISRM/.test(q.cat)&&(!sel||sel.has(q.cat))); }
+  else{ const sel=expandCats(); pool=QUESTION_BANK.filter(q=>q.cat!=='결함사례'&&q.cat!=='주요확인'&&!/^CPPG/.test(q.cat)&&!/^ISRM/.test(q.cat)&&(!sel||sel.has(q.cat))); }
   const s=state.session;
   if(restore&&s&&s.key===catKey()&&Array.isArray(s.order)){
     const byId={}; pool.forEach(q=>{if(q.id)byId[q.id]=q});
