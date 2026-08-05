@@ -39,6 +39,12 @@
   @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
   .qmeta{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--tx2);margin-bottom:10px}
   .tag{background:var(--card2);padding:3px 9px;border-radius:8px;font-weight:700;color:var(--pri2)}
+  .tag.official{color:var(--warn);border:1px solid var(--warn);margin-left:5px}
+  /* 원문 도표 이미지 — 좁은 화면에서는 가로 스크롤, 탭하면 원본 크기로 확대 */
+  .fig{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:10px 0}
+  .fig img{display:block;max-width:100%;height:auto;border:1px solid var(--line);border-radius:10px;background:#fff;cursor:zoom-in}
+  .fig img.zoom{max-width:none;cursor:zoom-out}
+  .fig .cap{font-size:11.5px;color:var(--tx2);margin-top:4px}
   .qtext{font-size:17px;font-weight:700;margin:0 0 14px;line-height:1.5}
   .opt{display:flex;gap:10px;align-items:flex-start;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;margin-bottom:9px;background:var(--card2);cursor:pointer;transition:.12s}
   .opt:active{transform:scale(.99)}
@@ -404,8 +410,9 @@ function render(){
   if(q.cat==='결함사례'||q.cat==='주요확인'){ renderDefect(q,area); return; }
   area.innerHTML=`
    <div class="card">
-     <div class="qmeta"><span class="tag">${CAT_LABEL[q.cat]||q.cat}</span><span><span class="star ${state.bookmarks.includes(q.id)?'on':''}" onclick="toggleBookmark('${q.id}')">${state.bookmarks.includes(q.id)?'★':'☆'} 별표</span> &nbsp; ${idx+1} / ${deck.length}</span></div>
+     <div class="qmeta"><span><span class="tag">${CAT_LABEL[q.cat]||q.cat}</span>${officialTag(q)}</span><span><span class="star ${state.bookmarks.includes(q.id)?'on':''}" onclick="toggleBookmark('${q.id}')">${state.bookmarks.includes(q.id)?'★':'☆'} 별표</span> &nbsp; ${idx+1} / ${deck.length}</span></div>
      <p class="qtext">${qhtml(q.q)}</p>
+     ${figs(q.qimg,'원문 도표')}
      <div id="opts">${q.opts.map((o,i)=>`<div class="opt" onclick="choose(${i})"><div class="n">${'①②③④⑤'[i]}</div><div>${esc(o)}</div></div>`).join('')}</div>
      <div class="exp" id="exp"></div>
      <div class="btnrow">
@@ -425,7 +432,7 @@ function grade(q,i,optsEl,expEl){
     if(k===i&&!correct)el.classList.add('wrong');
   });
   expEl.innerHTML=`<div class="res ${correct?'o':'x'}">${correct?'⭕ 정답입니다':'❌ 오답입니다 (정답 '+'①②③④⑤'[q.a]+')'}</div>
-    <div>${esc(q.exp)}</div><div class="src">📎 <b>출처</b> · ${esc(q.src)}</div>`;
+    <div>${esc(q.exp)}</div>${figs(q.eimg,'해설 참고 도표')}<div class="src">📎 <b>출처</b> · ${esc(q.src)}</div>`;
   expEl.classList.add('show');
   document.getElementById('nextBtn').disabled=false;
   const nb=document.getElementById('nextBar'); if(nb)nb.style.display='block';
@@ -589,8 +596,9 @@ function toggleWrongNote(){
   box.innerHTML='<div style="margin:14px 0 6px;font-weight:700">📕 오답노트 ('+list.length+'문제)</div>'+list.map(q=>`
     <div class="review-item">
       <div class="rq">[${CAT_LABEL[q.cat]||q.cat}] ${qhtml(q.q)}</div>
+      ${figs(q.qimg,'원문 도표')}
       <div class="ans ok">정답 ${'①②③④⑤'[q.a]} ${esc(q.opts[q.a])}</div>
-      <div class="rexp">${esc(q.exp)}<br>📎 ${esc(q.src)}</div>
+      <div class="rexp">${esc(q.exp)}<br>📎 ${esc(q.src)}</div>${figs(q.eimg,'해설 참고 도표')}
     </div>`).join('');
 }
 /* ====== 모의고사 ====== */
@@ -610,8 +618,9 @@ function renderExamQ(){
   document.getElementById('examArea').innerHTML=`
    <div class="examtop"><span class="t">🎯 모의고사</span><span>${e.i+1} / ${e.qs.length}</span></div>
    <div class="card">
-     <div class="qmeta"><span class="tag">${CAT_LABEL[q.cat]||q.cat}</span><span>문항 ${e.i+1}</span></div>
+     <div class="qmeta"><span><span class="tag">${CAT_LABEL[q.cat]||q.cat}</span>${officialTag(q)}</span><span>문항 ${e.i+1}</span></div>
      <p class="qtext">${qhtml(q.q)}</p>
+     ${figs(q.qimg,'원문 도표')}
      <div>${q.opts.map((o,i)=>`<div class="opt" onclick="answerExam(${i})"><div class="n">${sym[i]}</div><div>${esc(o)}</div></div>`).join('')}</div>
    </div>`;
 }
@@ -632,9 +641,10 @@ function finishExam(){
   const rev=e.qs.map((q,k)=>{const my=e.answers[k],c=my===q.a;return `
     <div class="review-item">
       <div class="rq">${k+1}. [${CAT_LABEL[q.cat]||q.cat}] ${qhtml(q.q)}</div>
+      ${figs(q.qimg,'원문 도표')}
       <div class="ans ${c?'ok':'no'}">내 답 ${my!=null?sym[my]:'-'} ${c?'⭕':'❌'}</div>
       ${c?'':`<div class="ans ok">정답 ${sym[q.a]} ${esc(q.opts[q.a])}</div>`}
-      <div class="rexp">${esc(q.exp)}<br>📎 ${esc(q.src)}</div>
+      <div class="rexp">${esc(q.exp)}<br>📎 ${esc(q.src)}</div>${figs(q.eimg,'해설 참고 도표')}
     </div>`;}).join('');
   document.getElementById('examArea').innerHTML=`
     <div class="card center">
@@ -660,6 +670,13 @@ document.querySelectorAll('.nav a').forEach(a=>a.onclick=e=>{
   a.classList.add('on');switchView(a.dataset.v);
 });
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+// 공식 공개 샘플문제(원문 그대로)임을 표시
+function officialTag(q){return /공식 샘플문제/.test(q.src||'')?'<span class="tag official">📘 공식 샘플</span>':''}
+// 원문 PDF에서 추출한 도표 이미지 (qimg: 문제용, eimg: 해설용)
+function figs(list,cap){
+  if(!list||!list.length)return '';
+  return list.map(f=>`<div class="fig"><img src="${esc(f)}" alt="${esc(cap)}" loading="lazy" onclick="this.classList.toggle('zoom')"><div class="cap">${esc(cap)} · 탭하면 원본 크기</div></div>`).join('');
+}
 function qhtml(s){return String(s).split('```').map((seg,i)=>i%2?'<pre class="term">'+esc(seg.replace(/^\n|\n$/g,''))+'</pre>':esc(seg).replace(/\n/g,'<br>')).join('')}
 boot();
 </script>

@@ -20,3 +20,8 @@ tmp/
 *.hwpx
 문제/
 특강자료/
+
+# ISRM 문제은행 도표(문항 풀이에 필수) — 위 *.png 규칙의 예외
+!img/
+!img/isrm/
+!img/isrm/*.png
